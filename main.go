@@ -26,6 +26,9 @@ var width *int
 // number of interactions between cultures per simulation tick
 var interactions *int
 
+// percentage of simulation grid that is populated with cultures
+var coverage *float64
+
 // number of simulation ticks
 var numTicks *int
 
@@ -41,6 +44,7 @@ func main() {
 	interactions = flag.Int("n", 100, "number of interactions between cultures per simulation tick")
 	numTicks = flag.Int("t", 200, "number of simulation ticks")
 	width = flag.Int("w", 36, "the number of cells on one side of the image")
+	coverage = flag.Float64("c", 1.0, "percentage of simulation grid that is populated with cultures")
 	flag.Parse()
 
 	// using termbox to control the simulation
@@ -81,33 +85,39 @@ func main() {
 		for c := 0; c < *interactions; c++ {
 			// randomly choose one cell
 			r := rand.Intn(*width * *width)
-			// find all its neighbours
-			neighbours := findNeighboursIndex(r)
-			for _, neighbour := range neighbours {
-				// cultural differences between the neighbour
-				d := diff(r, neighbour)
-				// probability of a cultural exchange happening
-				probability := 1 - float64(d)/96.0
-				dp := rand.Float64()
-				// cultural exchange happens
-				if dp < probability {
-					// randomly select one of the features
-					i := rand.Intn(6)
-					if d != 0 {
-						var rp int
-						// randomly select either trait to be replaced by the neighbour's
-						if rand.Intn(1) == 0 {
-							replacement := extract(cells[r].getRGB(), uint(i))
-							rp = replace(cells[neighbour].getRGB(), replacement, uint(i))
-						} else {
-							replacement := extract(cells[neighbour].getRGB(), uint(i))
-							rp = replace(cells[r].getRGB(), replacement, uint(i))
+			if cells[r].getRGB() != 0x0000 {
+				// find all its neighbours
+				neighbours := findNeighboursIndex(r)
+				for _, neighbour := range neighbours {
+					if cells[neighbour].getRGB() != 0x0000 {
+						// cultural differences between the neighbour
+						d := diff(r, neighbour)
+						// probability of a cultural exchange happening
+						probability := 1 - float64(d)/96.0
+						dp := rand.Float64()
+						// cultural exchange happens
+						if dp < probability {
+							// randomly select one of the features
+							i := rand.Intn(6)
+							if d != 0 {
+								var rp int
+								// randomly select either trait to be replaced by the neighbour's
+								if rand.Intn(1) == 0 {
+									replacement := extract(cells[r].getRGB(), uint(i))
+									rp = replace(cells[neighbour].getRGB(), replacement, uint(i))
+								} else {
+									replacement := extract(cells[neighbour].getRGB(), uint(i))
+									rp = replace(cells[r].getRGB(), replacement, uint(i))
+								}
+								cells[neighbour].setRGB(rp)
+								chg++
+							}
 						}
-						cells[neighbour].setRGB(rp)
-						chg++
+
 					}
 				}
 			}
+
 			// calculate the average distance between all features and the number of unique cultures
 			dist = featureDistAvg()
 			uniq = similarCount()
@@ -117,6 +127,7 @@ func main() {
 		printImage(img.SubImage(img.Rect))
 		fmt.Println("\nNumber of cultural interactions per simulation tick:", *interactions)
 		fmt.Printf("Simulation ticks: %d/%d", t, *numTicks)
+		fmt.Printf("\nSimulation coverage: %2.0f%%", *coverage*100)
 
 		fmt.Println("\n\naverage distance between cultures:", dist,
 			"\nnumber of unique cultures        :", uniq,
@@ -128,10 +139,10 @@ func main() {
 	}
 	termbox.Close()
 
-	simName := fmt.Sprintf("n%d-t%d-w%d", *interactions, *numTicks, *width)
+	simName := fmt.Sprintf("n%d-t%d-w%d-c%1.1f", *interactions, *numTicks, *width, *coverage)
 	saveData(simName)
-	fmt.Printf("Simulation ended, data written to log-%s.csv and"+
-		" cells-%s.csv, last image saved to %s.png\n",
+	fmt.Printf("Simulation ended.\n"+"Data written to log-%s.csv \nLast grid saved to"+
+		" cells-%s.csv \nLast image saved to %s.png\n",
 		simName, simName, simName)
 }
 
@@ -142,7 +153,7 @@ func saveData(name string) {
 		fdistances, // average feature distance
 		changes,    // number of changes
 		uniques}    // number of unique cultures
-	csvfile, err := os.Create(fmt.Sprintf("log-%s.csv", name))
+	csvfile, err := os.Create(fmt.Sprintf("data/log-%s.csv", name))
 	if err != nil {
 		log.Fatalf("failed creating file: %s", err)
 	}
@@ -159,7 +170,7 @@ func saveData(name string) {
 	for _, c := range cells {
 		grid[c.getRGB()]++
 	}
-	cellsfile, err := os.Create(fmt.Sprintf("cell-%s.csv", name))
+	cellsfile, err := os.Create(fmt.Sprintf("data/cell-%s.csv", name))
 	if err != nil {
 		log.Fatalf("failed creating file: %s", err)
 	}
@@ -171,5 +182,5 @@ func saveData(name string) {
 	csvfile.Close()
 
 	// save the last image of the grid
-	saveImage(name+".png", img)
+	saveImage("data/"+name+".png", img)
 }

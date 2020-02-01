@@ -30,19 +30,6 @@ func (c *Cell) setRGB(i int) {
 	c.Color = color.RGBA{getR(i), getG(i), getB(i), uint8(255)}
 }
 
-// create the initial population
-func createPopulation() {
-	cells = make([]Cell, *width*(*width))
-	n := 0
-	for i := 1; i <= *width; i++ {
-		for j := 1; j <= *width; j++ {
-			cells[n] = createCell(i*CELLSIZE, j*CELLSIZE, rand.Intn(0xFFFFFF))
-			n++
-		}
-	}
-	fdistances, changes, uniques = []string{"distance"}, []string{"change"}, []string{"unique"}
-}
-
 // create a cell
 func createCell(x, y, clr int) (c Cell) {
 	c = Cell{
@@ -52,6 +39,42 @@ func createCell(x, y, clr int) (c Cell) {
 		Color: color.RGBA{getR(clr), getG(clr), getB(clr), uint8(255)},
 	}
 	return
+}
+
+// create the initial population
+func createPopulation() {
+	cells = make([]Cell, *width*(*width))
+	n := 0
+	for i := 1; i <= *width; i++ {
+		for j := 1; j <= *width; j++ {
+			p := rand.Float64()
+			if p < *coverage {
+				cells[n] = createCell(i*CELLSIZE, j*CELLSIZE, rand.Intn(0xFFFFFF))
+			} else {
+				cells[n] = createCell(i*CELLSIZE, j*CELLSIZE, 0x000000)
+			}
+			n++
+		}
+	}
+	fdistances, changes, uniques = []string{"distance"}, []string{"change"}, []string{"unique"}
+}
+
+// the color integer is 0x1A2B3CFF where
+// 1A is the red, 2B is green and 3C is blue
+
+// get the red (R) from the color integer i
+func getR(i int) uint8 {
+	return uint8((i >> 16) & 0x0000FF)
+}
+
+// get the green (G) from the color integer i
+func getG(i int) uint8 {
+	return uint8((i >> 8) & 0x0000FF)
+}
+
+// get the blue (B) from the color integer i
+func getB(i int) uint8 {
+	return uint8(i & 0x0000FF)
 }
 
 // total distance between traits for all features, between 2 cultures
@@ -117,22 +140,4 @@ func replace(n, replacement int, pos uint) int {
 	i1 := n & MASKARRAY[pos]
 	mask2 := replacement << (4 * pos)
 	return (i1 ^ mask2)
-}
-
-// the color integer is 0x1A2B3CFF where
-// 1A is the red, 2B is green and 3C is blue
-
-// get the red (R) from the color integer i
-func getR(i int) uint8 {
-	return uint8((i >> 16) & 0x0000FF)
-}
-
-// get the green (G) from the color integer i
-func getG(i int) uint8 {
-	return uint8((i >> 8) & 0x0000FF)
-}
-
-// get the blue (B) from the color integer i
-func getB(i int) uint8 {
-	return uint8(i & 0x0000FF)
 }
