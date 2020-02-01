@@ -19,6 +19,8 @@
 
 .ipynb_checkpoints
 
+.DS_Store
+
 culture-sim
 # Dependency directories (remove the comment below to include it)
 # vendor/

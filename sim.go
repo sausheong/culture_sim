@@ -93,11 +93,13 @@ func featureDistAvg() int {
 	for c := range cells {
 		neighbours := findNeighboursIndex(c)
 		for _, neighbour := range neighbours {
-			count++
-			dist = dist + featureDistance(cells[c].getRGB(), cells[neighbour].getRGB())
+			if cells[neighbour].getRGB() != 0x0000 {
+				count++
+				dist = dist + featureDistance(cells[c].getRGB(), cells[neighbour].getRGB())
+			}
 		}
 	}
-	return dist / *width
+	return int(float64(dist / *width) * (*coverage))
 }
 
 // distance between 2 features
